@@ -2,6 +2,17 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@media print {
+  @page { size: A4; margin: 14mm; }
+  nav, aside, header, form, button { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  body { color: #000; background: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  tr { break-inside: avoid; }
+  th, td { border-bottom: 1px solid #ddd; }
+  .overflow-x-auto { overflow: visible !important; }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

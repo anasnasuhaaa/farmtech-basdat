@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { updateUser } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
   const { supabase } = await requireSession(["Administrator"]);
@@ -19,7 +20,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       <div className="min-w-0"><p className="truncate text-sm font-medium">{user.email}</p><label className="text-xs">Nama<input name="nama" defaultValue={user.nama} required className="mt-1 w-full rounded-md border p-2 text-sm" /></label></div>
       <label className="text-xs">Role<select name="role" defaultValue={role(user.id_pengguna)} className="mt-1 w-full rounded-md border p-2 text-sm">{["Administrator","Pemilik","ABK"].map(x => <option key={x}>{x}</option>)}</select></label>
       <label className="text-xs">Status<select name="status" defaultValue={user.status_akun} className="mt-1 w-full rounded-md border p-2 text-sm"><option>AKTIF</option><option>NONAKTIF</option></select></label>
-      <button className="self-end rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Simpan</button>
+      <SubmitButton className="self-end rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Simpan</SubmitButton>
     </form>)}</div>
     {!users?.length && <p className="text-sm text-muted-foreground">Belum ada profil. Login akun demo terlebih dahulu.</p>}
   </div>;

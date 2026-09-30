@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { demoAccounts } from "@/lib/demo-accounts";
 import { login } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 export function LoginForm({ error }: { error?: string }) {
   const [active, setActive] = useState(0);
   const [email, setEmail] = useState("");
@@ -17,7 +18,7 @@ export function LoginForm({ error }: { error?: string }) {
       <label className="block text-sm font-medium">Email<input required type="email" name="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-md border bg-background p-2" /></label>
       <label className="block text-sm font-medium">Password<input required type="password" name="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full rounded-md border bg-background p-2" /></label>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <button className="w-full rounded-md bg-primary p-2 text-primary-foreground">Login</button>
+      <SubmitButton className="w-full rounded-md bg-primary p-2 text-primary-foreground">Login</SubmitButton>
     </form>
   </div>;
 }

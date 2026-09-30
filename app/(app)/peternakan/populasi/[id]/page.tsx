@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { recordMutation, moveCage } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 export default async function PopulationDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> }) {
   const { id } = await params; const message = await searchParams;
   const { supabase, role } = await requireSession();
@@ -18,8 +19,8 @@ export default async function PopulationDetail({ params, searchParams }: { param
       <label>Tanggal<input required type="date" name="tanggal" defaultValue={new Date().toISOString().slice(0,10)} className="block w-full rounded-md border p-2" /></label>
       <label>Jenis<select required name="jenis_mutasi" className="block w-full rounded-md border p-2">{["KEMATIAN","PENJUALAN","PEMINDAHAN","AFKIR"].map(x=><option key={x}>{x}</option>)}</select></label>
       <label>Jumlah<input required min="1" type="number" name="jumlah" className="block w-full rounded-md border p-2" /></label>
-      <label>Keterangan<input name="keterangan" className="block w-full rounded-md border p-2" /></label><button className="rounded-md bg-primary p-2 text-primary-foreground">Simpan mutasi</button></form>}
-    {role === "Administrator" && <form action={moveCage.bind(null,id)} className="flex flex-wrap gap-2 rounded-lg border p-4"><select required name="id_kandang" defaultValue={population.id_kandang} className="rounded-md border p-2">{cages?.map(x=><option key={x.id_kandang} value={x.id_kandang}>{x.nama_kandang}</option>)}</select><button className="rounded-md border px-3">Pindahkan seluruh kelompok</button></form>}
+      <label>Keterangan<input name="keterangan" className="block w-full rounded-md border p-2" /></label><SubmitButton className="rounded-md bg-primary p-2 text-primary-foreground">Simpan mutasi</SubmitButton></form>}
+    {role === "Administrator" && <form action={moveCage.bind(null,id)} className="flex flex-wrap gap-2 rounded-lg border p-4"><select required name="id_kandang" defaultValue={population.id_kandang} className="rounded-md border p-2">{cages?.map(x=><option key={x.id_kandang} value={x.id_kandang}>{x.nama_kandang}</option>)}</select><SubmitButton className="rounded-md border px-3">Pindahkan seluruh kelompok</SubmitButton></form>}
     <div className="rounded-lg border"><h2 className="border-b p-3 font-semibold">Riwayat mutasi</h2>{mutations?.length ? mutations.map(x=><p key={x.no_mutasi} className="border-b p-3 text-sm">#{x.no_mutasi} · {x.tanggal} · {x.jenis_mutasi} · {x.jumlah} ekor</p>) : <p className="p-3 text-sm text-muted-foreground">Belum ada mutasi.</p>}</div>
   </div>;
 }

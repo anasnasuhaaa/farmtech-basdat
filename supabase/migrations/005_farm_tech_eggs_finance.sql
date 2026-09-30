@@ -9,7 +9,7 @@ declare harvest_id uuid;
 begin
   perform public.require_role(array['Administrator','ABK']);
   if harvest_date is null or whole_count is null or cracked_count is null or whole_weight is null
-    or whole_count<0 or cracked_count<0 or whole_weight<0 or whole_count+cracked_count=0 then
+    or whole_count<0 or cracked_count<0 or whole_weight<0 then
     raise exception 'Data panen tidak valid'; end if;
   insert into public.panen(id_kandang,tanggal,jumlah_utuh,jumlah_retak,berat_utuh_kg,keterangan,created_by)
   values(cage_id,harvest_date,whole_count,cracked_count,whole_weight,note,auth.uid()) returning id_panen into harvest_id;
@@ -20,7 +20,7 @@ create function public.sort_harvest(harvest_id uuid, details jsonb) returns void
 declare item jsonb; expected integer; total integer:=0; detail_no integer:=0;
 begin
   perform public.require_role(array['Administrator','ABK']);
-  if jsonb_typeof(details)<>'array' or jsonb_array_length(details)=0 then raise exception 'Detail sortir wajib diisi'; end if;
+  if jsonb_typeof(details) is distinct from 'array' or jsonb_array_length(details)=0 then raise exception 'Detail sortir wajib diisi'; end if;
   perform pg_advisory_xact_lock(4284102);
   select jumlah_utuh+jumlah_retak into expected from public.panen where id_panen=harvest_id for update;
   if expected is null then raise exception 'Panen tidak ditemukan'; end if;
@@ -44,7 +44,7 @@ declare item jsonb; distribution_id uuid; transaction_id uuid; category_id uuid;
   detail_no integer:=0; total numeric:=0; quantity integer; unit_price numeric;
 begin
   perform public.require_role(array['Administrator','ABK']);
-  if distribution_date is null or nullif(trim(buyer),'') is null or jsonb_typeof(details)<>'array'
+  if distribution_date is null or nullif(trim(buyer),'') is null or jsonb_typeof(details) is distinct from 'array'
     or jsonb_array_length(details)=0 then raise exception 'Distribusi perlu pembeli dan detail'; end if;
   perform pg_advisory_xact_lock(4284102);
   for item in select value from jsonb_array_elements(details) loop
@@ -194,3 +194,9 @@ revoke all on function public.create_egg_distribution(date,text,jsonb,text) from
 revoke all on function public.create_manual_finance(text,uuid,date,numeric,text) from public, anon;
 revoke all on function public.create_abk_income(date,numeric,text) from public, anon;
 revoke all on function public.cancel_operation(text,uuid) from public, anon;
+grant execute on function public.create_harvest(uuid,date,integer,integer,numeric,text) to authenticated;
+grant execute on function public.sort_harvest(uuid,jsonb) to authenticated;
+grant execute on function public.create_egg_distribution(date,text,jsonb,text) to authenticated;
+grant execute on function public.create_manual_finance(text,uuid,date,numeric,text) to authenticated;
+grant execute on function public.create_abk_income(date,numeric,text) to authenticated;
+grant execute on function public.cancel_operation(text,uuid) to authenticated;

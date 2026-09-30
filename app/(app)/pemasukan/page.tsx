@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { saveIncome } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function IncomePage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
   await requireSession(["ABK"]);
@@ -13,7 +14,7 @@ export default async function IncomePage({ searchParams }: { searchParams: Promi
       <label className="block text-sm">Tanggal<input name="tanggal" type="date" required defaultValue={new Date().toISOString().slice(0,10)} className="mt-1 w-full rounded-md border p-2" /></label>
       <label className="block text-sm">Nominal (Rp)<input name="nominal" type="number" min="0.01" step="0.01" required className="mt-1 w-full rounded-md border p-2" /></label>
       <label className="block text-sm">Keterangan<textarea name="keterangan" className="mt-1 w-full rounded-md border p-2" /></label>
-      <button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Simpan pemasukan</button>
+      <SubmitButton className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Simpan pemasukan</SubmitButton>
     </form>
   </div>;
 }
