@@ -9,7 +9,7 @@ export async function saveSection(path: string, form: FormData) {
   const config = sections[path];
   if (!config || !config.fields.length) redirect("/dashboard");
   const { supabase, role } = await requireSession();
-  if (role === "Pemilik" || (config.master && role !== "Administrator") || (config.adminOnly && role !== "Administrator")) redirect("/dashboard");
+  if (role === "Pemilik" || (config.master && role !== "Administrator") || ((config.adminOnly || config.finance) && role !== "Administrator")) redirect("/dashboard");
   const url = `/${path}`;
   const errorUrl = (message: string) => `${url}?error=${encodeURIComponent(message)}`;
   const operation = value(form, "_operation") || "create";
@@ -30,7 +30,10 @@ export async function saveSection(path: string, form: FormData) {
     }
   } else {
     const details = value(form, "_details");
-    const json = details ? JSON.parse(details) : [];
+    let json: unknown[] = [];
+    try { json = details ? JSON.parse(details) : []; }
+    catch { redirect(errorUrl("Detail tidak valid.")); }
+    if (!Array.isArray(json)) redirect(errorUrl("Detail tidak valid."));
     const rpc: Record<string, { name: string; args: Record<string, unknown> }> = {
       create_population: { name: "create_population", args: { cage_id: value(form,"id_kandang"), category_id: value(form,"id_kategori_ternak"), arrival_date: value(form,"tanggal_masuk"), initial_count: Number(value(form,"jumlah_awal")), arrival_age: value(form,"usia_masuk") ? Number(value(form,"usia_masuk")) : null, breed: value(form,"ras") || null, note: value(form,"keterangan") || null } },
       create_feed_receipt: { name: "create_feed_receipt", args: { feed_id: value(form,"id_pakan"), entry_date: value(form,"tanggal"), weight_kg: Number(value(form,"berat_kg")), price_total: Number(value(form,"harga_total")), note: value(form,"keterangan") || null } },
@@ -52,4 +55,18 @@ export async function saveSection(path: string, form: FormData) {
   }
   revalidatePath(url);
   redirect(`${url}?success=${encodeURIComponent("Data berhasil disimpan.")}`);
+}
+
+export async function cancelSection(path: string, id: string) {
+  const kinds: Record<string, string> = {
+    "pakan/masuk": "pakan_masuk", "pakan/mix": "mix_pakan", "pakan/keluar": "pengeluaran_pakan",
+    "telur/panen": "panen", "telur/distribusi": "distribusi_telur", "keuangan/transaksi": "transaksi_keuangan",
+  };
+  const kind = kinds[path];
+  if (!kind) redirect("/dashboard");
+  const { supabase } = await requireSession(["Administrator"]);
+  const { error } = await supabase.rpc("cancel_operation", { kind, target_id: id });
+  if (error) redirect(`/${path}?error=${encodeURIComponent(error.message.includes("Stok") ? "Stok yang sudah dipakai menghalangi pembatalan." : "Pembatalan gagal. Periksa relasi transaksi.")}`);
+  revalidatePath(`/${path}`);
+  redirect(`/${path}?success=${encodeURIComponent("Transaksi dibatalkan. Buat ulang jika perlu koreksi.")}`);
 }

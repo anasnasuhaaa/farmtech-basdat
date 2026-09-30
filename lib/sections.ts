@@ -1,5 +1,5 @@
 export type Field = { name: string; label: string; type?: "text" | "number" | "date" | "select" | "textarea"; required?: boolean; source?: string; options?: string[]; step?: string };
-export type Section = { title: string; table: string; id: string; fields: Field[]; action?: string; adminOnly?: boolean; master?: boolean; columns: string[] };
+export type Section = { title: string; table: string; id: string; fields: Field[]; action?: string; adminOnly?: boolean; finance?: boolean; master?: boolean; columns: string[] };
 const date: Field = { name: "tanggal", label: "Tanggal", type: "date", required: true };
 const note: Field = { name: "keterangan", label: "Keterangan", type: "textarea" };
 const cage: Field = { name: "id_kandang", label: "Kandang", type: "select", source: "kandang", required: true };
@@ -21,7 +21,7 @@ export const sections: Record<string, Section> = {
   "telur/distribusi": { title: "Distribusi telur", table: "distribusi_telur", id: "id_distribusi", action: "create_egg_distribution", fields: [date, { name: "tujuan_pembeli", label: "Tujuan pembeli", required: true }, note], columns: ["tanggal", "tujuan_pembeli", "total_harga"] },
   "telur/stok": { title: "Stok telur", table: "v_stok_telur", id: "id_kategori_telur", fields: [], columns: ["nama_kategori", "stok_telur"] },
   "keuangan/kategori": { title: "Kategori keuangan", table: "kategori_keuangan", id: "id_kategori_keuangan", adminOnly: true, master: true, fields: [{ name: "nama_kategori", label: "Nama kategori", required: true }, { name: "tipe", label: "Tipe", type: "select", options: ["PEMASUKAN", "PENGELUARAN"], required: true }], columns: ["nama_kategori", "tipe"] },
-  "keuangan/transaksi": { title: "Transaksi keuangan", table: "transaksi_keuangan", id: "id_transaksi", action: "create_manual_finance", adminOnly: true, fields: [{ name: "tipe", label: "Tipe", type: "select", options: ["PEMASUKAN", "PENGELUARAN"], required: true }, { name: "id_kategori_keuangan", label: "Kategori keuangan", type: "select", source: "kategori_keuangan", required: true }, date, num("nominal", "Nominal (Rp)", "0.01"), note], columns: ["tanggal", "id_kategori_keuangan", "nominal", "keterangan"] },
+  "keuangan/transaksi": { title: "Transaksi keuangan", table: "v_buku_keuangan", id: "id_transaksi", action: "create_manual_finance", finance: true, fields: [{ name: "tipe", label: "Tipe", type: "select", options: ["PEMASUKAN", "PENGELUARAN"], required: true }, { name: "id_kategori_keuangan", label: "Kategori keuangan", type: "select", source: "kategori_keuangan", required: true }, date, num("nominal", "Nominal (Rp)", "0.01"), note], columns: ["tanggal", "tipe", "id_kategori_keuangan", "nominal", "keterangan"] },
 };
 export const optionLabel: Record<string, string> = { kandang: "nama_kandang", kategori_ternak: "nama_kategori", pakan: "nama_pakan", kategori_telur: "nama_kategori", kategori_keuangan: "nama_kategori", panen: "tanggal" };
 export const optionId: Record<string, string> = { kandang: "id_kandang", kategori_ternak: "id_kategori_ternak", pakan: "id_pakan", kategori_telur: "id_kategori_telur", kategori_keuangan: "id_kategori_keuangan", panen: "id_panen" };

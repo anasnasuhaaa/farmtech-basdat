@@ -10,13 +10,14 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   const config = sections[path];
   if (!config) notFound();
   const { supabase, role } = await requireSession();
-  if (config.adminOnly && role !== "Administrator") notFound();
+  if ((config.adminOnly && role !== "Administrator") || (config.finance && role === "ABK")) notFound();
   const search = await searchParams;
   let query = supabase.from(config.table).select("*").limit(100);
   if (search.from && (config.columns.includes("tanggal") || config.columns.includes("tanggal_masuk"))) query = query.gte(config.columns.includes("tanggal") ? "tanggal" : "tanggal_masuk", search.from);
   if (search.to && (config.columns.includes("tanggal") || config.columns.includes("tanggal_masuk"))) query = query.lte(config.columns.includes("tanggal") ? "tanggal" : "tanggal_masuk", search.to);
   const { data, error } = await query;
-  const sources = [...new Set(config.fields.map(x => x.source).filter((x): x is string => !!x))];
+  const sources = [...new Set([...config.fields.map(x => x.source).filter((x): x is string => !!x),
+    ...(path === "telur/sortir" || path === "telur/distribusi" ? ["kategori_telur"] : [])])];
   const options: Record<string, { id: string; label: string }[]> = {};
   await Promise.all(sources.map(async source => {
     const result = await supabase.from(source).select("*").limit(200);
