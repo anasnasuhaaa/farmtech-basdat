@@ -1,10 +1,11 @@
 "use client";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Ellipsis, Plus, Search, Trash2 } from "lucide-react";
 import type { Role } from "@/lib/auth";
 import type { Field, Section } from "@/lib/sections";
+import { jakartaToday } from "@/lib/business/metrics";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { cancelSection, saveSection } from "./actions";
 import { PageHeader } from "@/components/page-header";
@@ -20,6 +21,7 @@ import { Input as TextInput } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -36,7 +38,7 @@ function FieldInput({ field, options, defaultValue }: { field: Field; options: P
   return <div className="space-y-2"><Label htmlFor={id}>{field.label}</Label>{field.type === "select"
     ? <FormSelect id={id} name={field.name} required={field.required} defaultValue={defaultValue} placeholder={`Pilih ${field.label.toLowerCase()}`} options={(field.source ? options[field.source] || [] : (field.options || []).map(value => ({ id: value, label: value }))).map(item => ({ ...item, label: item.label.replaceAll("_", " ") }))} />
     : field.type === "textarea" ? <Textarea id={id} name={field.name} defaultValue={defaultValue} rows={3} />
-    : <TextInput id={id} name={field.name} type={field.type || "text"} step={field.step} min={field.type === "number" ? 0 : undefined} required={field.required} defaultValue={defaultValue ?? (field.type === "date" ? new Date().toISOString().slice(0, 10) : "")} />}</div>;
+    : <TextInput id={id} name={field.name} type={field.type || "text"} step={field.step} min={field.type === "number" ? 0 : undefined} required={field.required} defaultValue={defaultValue ?? (field.type === "date" ? jakartaToday() : "")} />}</div>;
 }
 function FinanceFields({ options, initialType }: { options: Props["options"]; initialType?: string }) {
   const [type, setType] = useState(initialType === "PEMASUKAN" || initialType === "PENGELUARAN" ? initialType : "");
@@ -65,14 +67,14 @@ function RecordActions({ path, config, row, canWrite, role, onEdit }: { path: st
 }
 export function SectionView({ path, config, rows, details: loadedDetails, options, role, search, loadError, filterKey, filterOptions }: Props) {
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [details, setDetails] = useState<DetailItem[]>([blankDetail()]);
-  const formRef = useRef<HTMLDivElement>(null);
   const canWrite = role === "Administrator" || (role === "ABK" && !config.master && !config.adminOnly && !config.finance);
   const detailKind = path === "pakan/mix" ? "mix" : path === "telur/sortir" ? "sortir" : path === "telur/distribusi" ? "distribusi" : null;
   const detailOptions = detailKind === "mix" ? options.pakan : options.kategori_telur;
   const formAction = saveSection.bind(null, path);
   const parent = path.startsWith("peternakan") ? { label: "Peternakan", href: "/peternakan/kandang" } : path.startsWith("pakan") ? { label: "Pakan", href: "/pakan/master" } : path.startsWith("telur") ? { label: "Produksi telur", href: "/telur/panen" } : { label: "Keuangan", href: "/keuangan/transaksi" };
-  const formatCell = (column: string, value: unknown) => {
+  const formatCell = (column: string, value: unknown, row?: Record<string, unknown>) => {
     const raw = String(value ?? "");
     const source = column === "id_pakan_hasil" ? "pakan" : column.replace(/^id_/, "");
     const relation = options[source]?.find(item => item.id === raw)?.label;
@@ -80,16 +82,16 @@ export function SectionView({ path, config, rows, details: loadedDetails, option
     if (!raw) return "—";
     if (status(raw)) return <StatusBadge value={raw} />;
     if (/^tanggal/.test(column)) return formatDate(raw);
-    if (currency(column) && !Number.isNaN(Number(value))) return formatMoney(Number(value));
+    if (currency(column) && !Number.isNaN(Number(value))) return path === "keuangan/transaksi" && column === "nominal" ? <span className={row?.tipe === "PENGELUARAN" ? "text-destructive" : "text-primary"}>{row?.tipe === "PENGELUARAN" ? "−" : "+"}{formatMoney(Number(value))}</span> : formatMoney(Number(value));
     if (numeric(column) && !Number.isNaN(Number(value))) return formatNumber(Number(value), /berat|stok/.test(column));
     return raw;
   };
   const showActions = Boolean((config.master && canWrite) || path === "peternakan/populasi" || (role === "Administrator" && ["pakan/masuk", "pakan/mix", "pakan/keluar", "telur/panen", "telur/distribusi", "keuangan/transaksi"].includes(path)));
   return <div className="space-y-6">
     <FeedbackToast success={search.success} error={search.error} />
-    <PageHeader title={config.title} parent={parent} description={`Kelola data ${config.title.toLowerCase()} untuk operasional peternakan.`} action={canWrite && config.fields.length > 0 ? <Button type="button" onClick={() => { setEditing(null); formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}><Plus className="size-4" />Tambah {config.title}</Button> : undefined} />
+    <PageHeader title={config.title} parent={parent} description={`Kelola data ${config.title.toLowerCase()} untuk operasional peternakan.`} action={canWrite && config.fields.length > 0 ? <Button type="button" onClick={() => { setEditing(null); setDetails([blankDetail()]); setEditorOpen(true); }}><Plus className="size-4" />Tambah {config.title}</Button> : undefined} />
     {loadError && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">Data gagal dimuat. Periksa koneksi dan migration.</p>}
-    {canWrite && config.fields.length > 0 && <div ref={formRef} className="scroll-mt-24"><Card><CardHeader><CardTitle>{editing ? "Ubah data" : `Tambah ${config.title.toLowerCase()}`}</CardTitle><CardDescription>Isi informasi yang diperlukan, lalu simpan.</CardDescription></CardHeader><CardContent><form action={formAction} className="space-y-5">
+    {canWrite && config.fields.length > 0 && <Sheet open={editorOpen} onOpenChange={setEditorOpen}><SheetContent side="right" className="w-[min(94vw,720px)] max-w-none gap-0 sm:max-w-[720px]"><SheetHeader className="border-b"><SheetTitle>{editing ? `Ubah ${config.title.toLowerCase()}` : `Tambah ${config.title.toLowerCase()}`}</SheetTitle><SheetDescription>Isi informasi yang diperlukan, lalu simpan.</SheetDescription></SheetHeader><div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><form action={formAction} className="space-y-5">
       <input type="hidden" name="_operation" value={editing ? "edit" : "create"} /><input type="hidden" name="_id" value={editing ? String(editing[config.id]) : ""} />
       <div className="grid gap-4 sm:grid-cols-2">{path === "keuangan/transaksi" && <FinanceFields options={options} initialType={search.type} />}{config.fields.filter(field => path !== "keuangan/transaksi" || (field.name !== "tipe" && field.name !== "id_kategori_keuangan")).map(field => <FieldInput key={`${field.name}-${String(editing?.[config.id] || "new")}`} field={field} options={options} defaultValue={editing ? String(editing[field.name] ?? "") : undefined} />)}</div>
       {detailKind && <div className="space-y-4"><Separator /><div><h3 className="font-semibold">{detailKind === "mix" ? "Bahan campuran" : detailKind === "sortir" ? "Hasil sortir" : "Rincian distribusi"}</h3><p className="text-sm text-muted-foreground">Tambahkan setiap item beserta jumlahnya.</p></div>
@@ -100,18 +102,18 @@ export function SectionView({ path, config, rows, details: loadedDetails, option
           {details.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Hapus detail" onClick={() => setDetails(old => old.filter((_, i) => i !== index))}><Trash2 className="size-4" /></Button>}
         </div>)}</div>
         <Button type="button" variant="outline" onClick={() => setDetails(old => [...old, blankDetail()])}><Plus className="size-4" />Tambah item</Button>
-        <div className="rounded-lg bg-secondary px-4 py-3 text-sm"><span className="text-muted-foreground">Total {detailKind === "mix" ? "berat" : "telur"}</span><strong className="float-right tabular-nums">{formatNumber(details.reduce((sum, item) => sum + Number(detailKind === "mix" ? item.berat_bahan : item.jumlah_telur || 0), 0), detailKind === "mix")} {detailKind === "mix" ? "kg" : "butir"}</strong></div>
+        <div className="rounded-lg bg-secondary px-4 py-3 text-sm"><span className="text-muted-foreground">Total {detailKind === "mix" ? "berat" : "telur"}</span><strong className="float-right tabular-nums">{formatNumber(details.reduce((sum, item) => sum + Number(detailKind === "mix" ? item.berat_bahan : item.jumlah_telur || 0), 0), detailKind === "mix")} {detailKind === "mix" ? "kg" : "butir"}</strong>{detailKind === "distribusi" && <p className="clear-both pt-2 text-right font-semibold">Subtotal {formatMoney(details.reduce((sum, item) => sum + Number(item.jumlah_telur || 0) * Number(item.harga_satuan || 0), 0))}</p>}</div>
         <input type="hidden" name="_details" value={JSON.stringify(details.map(item => detailKind === "mix" ? { id_pakan: item.id_pakan, berat_bahan: Number(item.berat_bahan) } : detailKind === "sortir" ? { id_kategori_telur: item.id_kategori_telur, jumlah_telur: Number(item.jumlah_telur) } : { id_kategori_telur: item.id_kategori_telur, jumlah_telur: Number(item.jumlah_telur), harga_satuan: Number(item.harga_satuan) }))} />
       </div>}
-      <div className="flex justify-end gap-2 border-t pt-4">{editing && <Button type="button" variant="outline" onClick={() => setEditing(null)}>Batal</Button>}<Submit label={editing ? "Simpan perubahan" : "Simpan"} /></div>
-    </form></CardContent></Card></div>}
+      <div className="flex justify-end gap-2 border-t pt-4"><Button type="button" variant="outline" onClick={() => { setEditing(null); setEditorOpen(false); }}>Batal</Button><Submit label={editing ? "Simpan perubahan" : "Simpan"} /></div>
+    </form></div></SheetContent></Sheet>}
     <Card><CardHeader><CardTitle>Daftar {config.title.toLowerCase()}</CardTitle><CardDescription>{rows.length} data ditampilkan.</CardDescription></CardHeader><CardContent className="space-y-4">
       <form className="flex flex-wrap items-end gap-2"><label className="relative min-w-[180px] flex-1"><span className="sr-only">Cari data</span><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><TextInput name="q" defaultValue={search.q} placeholder="Cari data..." className="pl-9" /></label>
         {config.columns.some(column => column === "tanggal" || column === "tanggal_masuk") && <><label className="grid gap-1 text-xs text-muted-foreground">Dari<TextInput name="from" type="date" defaultValue={search.from} /></label><label className="grid gap-1 text-xs text-muted-foreground">Sampai<TextInput name="to" type="date" defaultValue={search.to} /></label></>}
         {filterKey && filterOptions.length > 0 && <select name="filter" defaultValue={search.filter || ""} aria-label={`Filter ${readable(filterKey)}`} className="h-9 rounded-lg border bg-card px-3 text-sm"><option value="">Semua {readable(filterKey)}</option>{filterOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>}
         <Button type="submit" variant="outline">Filter</Button>
       </form>
-      {rows.length ? <div className="overflow-x-auto rounded-lg border"><Table className="min-w-[620px]"><TableHeader><TableRow>{config.columns.map(column => <TableHead key={column} className={numeric(column) ? "text-right" : ""}>{readable(column)}</TableHead>)}{showActions && <TableHead className="w-12 text-right">Aksi</TableHead>}</TableRow></TableHeader><TableBody>{rows.map(row => <TableRow key={String(row[config.id])}>{config.columns.map(column => <TableCell key={column} className={numeric(column) ? "text-right tabular-nums" : "max-w-56 truncate"}>{formatCell(column, row[column])}</TableCell>)}{showActions && <TableCell className="text-right"><RecordActions path={path} config={config} row={row} canWrite={canWrite} role={role} onEdit={() => { setEditing(row); formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} /></TableCell>}</TableRow>)}</TableBody></Table></div> : <EmptyState icon={Search} title="Belum ada data" description={role === "Pemilik" ? "Belum ada data pada daftar ini." : "Tambahkan data atau ubah filter untuk menampilkan hasil."} />}
+      {rows.length ? <><div className="hidden overflow-x-auto rounded-lg border md:block"><Table className="min-w-[620px]"><TableHeader><TableRow>{config.columns.map(column => <TableHead key={column} className={numeric(column) ? "text-right" : ""}>{readable(column)}</TableHead>)}{showActions && <TableHead className="w-12 text-right">Aksi</TableHead>}</TableRow></TableHeader><TableBody>{rows.map(row => <TableRow key={String(row[config.id])}>{config.columns.map(column => <TableCell key={column} className={numeric(column) ? "text-right tabular-nums" : "max-w-56 truncate"}>{formatCell(column, row[column], row)}</TableCell>)}{showActions && <TableCell className="text-right"><RecordActions path={path} config={config} row={row} canWrite={canWrite} role={role} onEdit={() => { setEditing(row); setEditorOpen(true); }} /></TableCell>}</TableRow>)}</TableBody></Table></div><div className="grid gap-3 md:hidden">{rows.map(row => <article key={String(row[config.id])} className="rounded-xl border bg-card p-4"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="text-xs text-muted-foreground">{readable(config.columns[0])}</p><p className="truncate font-semibold">{formatCell(config.columns[0], row[config.columns[0]], row)}</p></div>{showActions && <RecordActions path={path} config={config} row={row} canWrite={canWrite} role={role} onEdit={() => { setEditing(row); setEditorOpen(true); }} />}</div>{config.columns[1] && <p className="mt-2 text-sm"><span className="text-muted-foreground">{readable(config.columns[1])}: </span>{formatCell(config.columns[1], row[config.columns[1]], row)}</p>}{config.columns.length > 2 && <details className="mt-3 border-t pt-2 text-sm"><summary className="cursor-pointer font-medium text-primary">Lihat detail</summary><dl className="mt-2 grid gap-2">{config.columns.slice(2).map(column => <div key={column} className="flex justify-between gap-3"><dt className="text-muted-foreground">{readable(column)}</dt><dd className="text-right">{formatCell(column, row[column], row)}</dd></div>)}</dl></details>}</article>)}</div></> : <EmptyState icon={Search} title="Belum ada data" description={role === "Pemilik" ? "Belum ada data pada daftar ini." : "Tambahkan data atau ubah filter untuk menampilkan hasil."} />}
     </CardContent></Card>
     {loadedDetails.length > 0 && <Card><CardHeader><CardTitle>Rincian transaksi</CardTitle></CardHeader><CardContent className="space-y-2">{rows.map(row => {
       const parentKey = path === "pakan/mix" ? "id_mix" : path === "telur/distribusi" ? "id_distribusi" : "id_panen";

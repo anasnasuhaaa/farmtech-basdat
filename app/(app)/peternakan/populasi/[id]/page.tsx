@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ArrowRightLeft, Bird, CalendarDays, UsersRound } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { jakartaToday } from "@/lib/business/metrics";
 import { formatDate, formatNumber } from "@/lib/format";
 import { recordMutation, moveCage } from "./actions";
 import { SubmitButton } from "@/components/submit-button";
@@ -31,7 +32,7 @@ export default async function PopulationDetail({ params, searchParams }: { param
     <div className="grid gap-3 sm:grid-cols-3"><MetricCard label="Jumlah awal" value={formatNumber(Number(population.jumlah_awal))} detail="Ekor" icon={Bird} /><MetricCard label="Jumlah aktif" value={formatNumber(Number(population.jumlah_aktif))} detail="Ekor" icon={UsersRound} /><MetricCard label="Tanggal masuk" value={formatDate(String(population.tanggal_masuk))} icon={CalendarDays} /></div>
     <div className="grid gap-4 lg:grid-cols-2">
       {role !== "Pemilik" && <Card><CardHeader><CardTitle>Catat mutasi</CardTitle></CardHeader><CardContent><form action={recordMutation.bind(null, id)} className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2"><Label htmlFor="mutation-date">Tanggal</Label><Input id="mutation-date" required type="date" name="tanggal" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
+        <div className="space-y-2"><Label htmlFor="mutation-date">Tanggal</Label><Input id="mutation-date" required type="date" name="tanggal" defaultValue={jakartaToday()} /></div>
         <div className="space-y-2"><Label htmlFor="mutation-type">Jenis</Label><FormSelect id="mutation-type" required name="jenis_mutasi" placeholder="Pilih jenis" defaultValue="KEMATIAN" options={["KEMATIAN", "PENJUALAN", "PEMINDAHAN", "AFKIR"].map(type => ({ id: type, label: type.replaceAll("_", " ") }))} /></div>
         <div className="space-y-2"><Label htmlFor="mutation-count">Jumlah</Label><Input id="mutation-count" required min="1" type="number" name="jumlah" /></div>
         <div className="space-y-2"><Label htmlFor="mutation-note">Keterangan</Label><Input id="mutation-note" name="keterangan" /></div>
