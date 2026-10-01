@@ -18,25 +18,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const range = dateRange(await searchParams);
   let data;
   try {
-    const [populations, mutations, harvests, feedIssues, feedStock, finance] = await Promise.all([
+    const [populations, mutations, harvests, feedIssues, feedStock, finance, categories] = await Promise.all([
       loadAll(supabase, "populasi_ternak"), loadAll(supabase, "mutasi_populasi"),
       loadAll(supabase, "panen"), loadAll(supabase, "pengeluaran_pakan"),
-      loadAll(supabase, "v_stok_pakan"), role === "ABK" ? Promise.resolve([]) : loadAll(supabase, "v_buku_keuangan"),
+      loadAll(supabase, "v_stok_pakan"), role === "ABK" ? Promise.resolve([]) : loadAll(supabase, "v_buku_keuangan"), loadAll(supabase, "kategori_ternak"),
     ]);
-    data = { populations, mutations, harvests, feedIssues, feedStock, finance };
+    data = { populations, mutations, harvests, feedIssues, feedStock, finance, categories };
   } catch {
     return <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Dashboard gagal dimuat. Periksa koneksi dan urutan migration.</div>;
   }
-  const days = dailyMetrics(range.from, range.to, data.populations, data.mutations, data.harvests, data.feedIssues, data.finance);
+  const layerIds = new Set(data.categories.filter(row => row.nama_kategori === "Ayam Petelur").map(row => String(row.id_kategori_ternak)));
+  const days = dailyMetrics(range.from, range.to, data.populations, data.mutations, data.harvests, data.feedIssues, data.finance, layerIds);
   const today = jakartaToday();
-  const latest = range.to === today ? days.at(-1)! : dailyMetrics(today, today, data.populations, data.mutations, data.harvests, data.feedIssues, data.finance)[0];
+  const latest = range.to === today ? days.at(-1)! : dailyMetrics(today, today, data.populations, data.mutations, data.harvests, data.feedIssues, data.finance, layerIds)[0];
   const totalEggs = days.reduce((sum, day) => sum + day.eggs, 0);
   const stockKg = data.feedStock.reduce((sum, row) => sum + Number(row.stok_kg || 0), 0);
   const cash = data.finance.reduce((sum, row) => sum + Number(row.nominal_bertanda || 0), 0);
   const cards = [
-    { label: "HDP hari ini", value: formatMetric(latest.hdp, "%"), detail: latest.hdp === null ? "Belum ada data hari ini" : undefined, icon: Gauge },
-    { label: "HHP hari ini", value: formatMetric(latest.hhp, "%"), detail: latest.hhp === null ? "Belum ada data hari ini" : undefined, icon: Egg },
-    { label: "FCR hari ini", value: formatMetric(latest.fcr), detail: latest.fcr === null ? "Belum ada data hari ini" : undefined, icon: Wheat, tone: "earth" as const },
+    { label: "HDP hari ini", value: formatMetric(latest.hdp, "%"), detail: "Telur / petelur hidup · proksi", icon: Gauge },
+    { label: "HHP harian demo", value: formatMetric(latest.hhp, "%"), detail: "Telur / jumlah awal kohort", icon: Egg },
+    { label: "FCR estimasi", value: formatMetric(latest.fcr), detail: "Pakan keluar / berat telur utuh", icon: Wheat, tone: "earth" as const },
     { label: "Populasi aktif", value: formatNumber(latest.population), detail: "Ekor", icon: UsersRound },
     { label: "Panen hari ini", value: formatNumber(latest.eggs), detail: "Butir", icon: Egg, tone: "amber" as const },
     { label: "Stok pakan", value: formatNumber(stockKg, true), detail: "Kilogram", icon: Boxes, tone: "earth" as const },
@@ -51,6 +52,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <Button type="submit" className="h-9">Terapkan</Button>
     </form>
     {range.invalid && <p role="alert" className="text-sm text-destructive">Periode tidak valid. Ditampilkan 30 hari terakhir (maksimal 90 hari).</p>}
+    {(latest.partial || latest.populationInconsistent) && <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">{latest.populationInconsistent ? "Data populasi tidak konsisten; HDP/HHP disembunyikan." : "Sebagian data di luar cakupan metrik petelur atau berat telur retak belum tercatat."} <Link href="/telur/panen" className="font-semibold underline underline-offset-2">Periksa panen</Link></p>}
     <div className="grid gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{cards.map(card => <MetricCard key={card.label} {...card} />)}</div>
     <p className="text-sm text-muted-foreground">Panen selama periode: <strong className="text-foreground">{formatNumber(totalEggs)} butir</strong>. <Link href="/telur/panen" className="font-medium text-primary underline underline-offset-2">Lihat panen</Link></p>
     <DashboardCharts days={days} showFinance={role !== "ABK"} />

@@ -60,34 +60,34 @@
 }
 
 :root {
-  --background: #faf8f3;
-  --foreground: #183d2a;
+  --background: #f7f7f0;
+  --foreground: #173d2d;
   --card: #ffffff;
   --card-foreground: #183d2a;
   --popover: #ffffff;
   --popover-foreground: #183d2a;
-  --primary: #2f6b45;
+  --primary: #397a50;
   --primary-foreground: #ffffff;
-  --secondary: #e8f3ec;
+  --secondary: #ddebd8;
   --secondary-foreground: #183d2a;
   --muted: #f1f1e9;
   --muted-foreground: #5d6c60;
-  --accent: #e8f3ec;
+  --accent: #ddebd8;
   --accent-foreground: #183d2a;
   --destructive: #aa4637;
   --border: #dde5d9;
   --input: #d6dfd4;
   --ring: #2f6b45;
-  --chart-1: #2f6b45;
+  --chart-1: #397a50;
   --chart-2: #d8a33b;
   --chart-3: #9a6b46;
   --chart-4: #2e8172;
   --chart-5: #aa6651;
-  --chart-production: #2f6b45;
+  --chart-production: #397a50;
   --chart-feed: #9a6b46;
   --chart-income: #2f6b45;
   --chart-expense: #aa6651;
-  --radius: 0.625rem;
+  --radius: 0.875rem;
   --sidebar: #f7f8f3;
   --sidebar-foreground: #183d2a;
   --sidebar-primary: #2f6b45;
