@@ -1,6 +1,16 @@
+import { UsersRound } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { updateUser } from "./actions";
 import { SubmitButton } from "@/components/submit-button";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
+import { EmptyState } from "@/components/empty-state";
+import { FeedbackToast } from "@/components/feedback-toast";
+import { FormSelect } from "@/components/form-select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
   const { supabase } = await requireSession(["Administrator"]);
@@ -11,17 +21,17 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     supabase.from("pemilik").select("id_pengguna"),
     supabase.from("abk").select("id_pengguna"),
   ]);
-  const role = (id: string) => admins?.some(x => x.id_pengguna===id) ? "Administrator" : owners?.some(x => x.id_pengguna===id) ? "Pemilik" : workers?.some(x => x.id_pengguna===id) ? "ABK" : "-";
-  return <div className="space-y-5"><h1 className="text-2xl font-semibold">Pengguna</h1>
-    <p className="text-sm text-muted-foreground">Identitas baru dibuat melalui Supabase Authentication. Di sini Anda dapat mengubah profil, status, dan role.</p>
-    {message.error && <p role="alert" className="text-destructive">{message.error}</p>}{message.success && <p role="status">{message.success}</p>}
-    <div className="space-y-3">{users?.map(user => <form key={user.id_pengguna} action={updateUser} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
-      <input type="hidden" name="id" value={user.id_pengguna} />
-      <div className="min-w-0"><p className="truncate text-sm font-medium">{user.email}</p><label className="text-xs">Nama<input name="nama" defaultValue={user.nama} required className="mt-1 w-full rounded-md border p-2 text-sm" /></label></div>
-      <label className="text-xs">Role<select name="role" defaultValue={role(user.id_pengguna)} className="mt-1 w-full rounded-md border p-2 text-sm">{["Administrator","Pemilik","ABK"].map(x => <option key={x}>{x}</option>)}</select></label>
-      <label className="text-xs">Status<select name="status" defaultValue={user.status_akun} className="mt-1 w-full rounded-md border p-2 text-sm"><option>AKTIF</option><option>NONAKTIF</option></select></label>
-      <SubmitButton className="self-end rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Simpan</SubmitButton>
-    </form>)}</div>
-    {!users?.length && <p className="text-sm text-muted-foreground">Belum ada profil. Login akun demo terlebih dahulu.</p>}
+  const role = (id: string) => admins?.some(item => item.id_pengguna === id) ? "Administrator" : owners?.some(item => item.id_pengguna === id) ? "Pemilik" : workers?.some(item => item.id_pengguna === id) ? "ABK" : "—";
+  return <div className="space-y-6">
+    <FeedbackToast success={message.success} error={message.error} />
+    <PageHeader title="Pengguna" parent={{ label: "Sistem", href: "/dashboard" }} description="Kelola profil, status, dan role pengguna. Identitas baru dibuat melalui Supabase Authentication." />
+    {users?.length ? <div className="grid gap-4 xl:grid-cols-2">{users.map(user => <Card key={user.id_pengguna}><CardHeader className="flex flex-row items-center gap-3"><Avatar className="size-10"><AvatarFallback className="bg-secondary text-primary">{(user.nama || user.email || "?").slice(0, 1).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><CardTitle className="truncate">{user.nama || "Tanpa nama"}</CardTitle><CardDescription className="truncate">{user.email}</CardDescription></div><StatusBadge value={user.status_akun} /></CardHeader><CardContent>
+      <form action={updateUser} className="grid gap-4 sm:grid-cols-2"><input type="hidden" name="id" value={user.id_pengguna} />
+        <div className="space-y-2 sm:col-span-2"><Label htmlFor={`user-name-${user.id_pengguna}`}>Nama</Label><Input id={`user-name-${user.id_pengguna}`} name="nama" defaultValue={user.nama} required /></div>
+        <div className="space-y-2"><Label htmlFor={`user-role-${user.id_pengguna}`}>Role</Label><FormSelect id={`user-role-${user.id_pengguna}`} name="role" placeholder="Pilih role" defaultValue={role(user.id_pengguna)} options={["Administrator", "Pemilik", "ABK"].map(value => ({ id: value, label: value }))} /></div>
+        <div className="space-y-2"><Label htmlFor={`user-status-${user.id_pengguna}`}>Status</Label><FormSelect id={`user-status-${user.id_pengguna}`} name="status" placeholder="Pilih status" defaultValue={user.status_akun} options={[{ id: "AKTIF", label: "Aktif" }, { id: "NONAKTIF", label: "Nonaktif" }]} /></div>
+        <div className="flex justify-end sm:col-span-2"><SubmitButton className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">Simpan perubahan</SubmitButton></div>
+      </form>
+    </CardContent></Card>)}</div> : <EmptyState icon={UsersRound} title="Belum ada profil" description="Login akun demo terlebih dahulu untuk membuat profil." />}
   </div>;
 }

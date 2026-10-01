@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { MetricCard } from "@/components/metric-card";
 import { StatusBadge } from "@/components/status-badge";
 import { FeedbackToast } from "@/components/feedback-toast";
+import { FormSelect } from "@/components/form-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,12 +32,12 @@ export default async function PopulationDetail({ params, searchParams }: { param
     <div className="grid gap-4 lg:grid-cols-2">
       {role !== "Pemilik" && <Card><CardHeader><CardTitle>Catat mutasi</CardTitle></CardHeader><CardContent><form action={recordMutation.bind(null, id)} className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2"><Label htmlFor="mutation-date">Tanggal</Label><Input id="mutation-date" required type="date" name="tanggal" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
-        <div className="space-y-2"><Label htmlFor="mutation-type">Jenis</Label><select id="mutation-type" required name="jenis_mutasi" className="h-9 w-full rounded-lg border bg-card px-3 text-sm">{["KEMATIAN", "PENJUALAN", "PEMINDAHAN", "AFKIR"].map(type => <option key={type}>{type}</option>)}</select></div>
+        <div className="space-y-2"><Label htmlFor="mutation-type">Jenis</Label><FormSelect id="mutation-type" required name="jenis_mutasi" placeholder="Pilih jenis" defaultValue="KEMATIAN" options={["KEMATIAN", "PENJUALAN", "PEMINDAHAN", "AFKIR"].map(type => ({ id: type, label: type.replaceAll("_", " ") }))} /></div>
         <div className="space-y-2"><Label htmlFor="mutation-count">Jumlah</Label><Input id="mutation-count" required min="1" type="number" name="jumlah" /></div>
         <div className="space-y-2"><Label htmlFor="mutation-note">Keterangan</Label><Input id="mutation-note" name="keterangan" /></div>
         <SubmitButton className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground sm:col-span-2">Simpan mutasi</SubmitButton>
       </form></CardContent></Card>}
-      {role === "Administrator" && <Card><CardHeader><CardTitle>Pindahkan kelompok</CardTitle></CardHeader><CardContent><form action={moveCage.bind(null, id)} className="space-y-4"><div className="space-y-2"><Label htmlFor="move-cage">Kandang tujuan</Label><select id="move-cage" required name="id_kandang" defaultValue={population.id_kandang} className="h-9 w-full rounded-lg border bg-card px-3 text-sm">{cages?.map(item => <option key={item.id_kandang} value={item.id_kandang}>{item.nama_kandang}</option>)}</select></div><SubmitButton className="h-9 rounded-lg border px-4 text-sm font-medium">Pindahkan seluruh kelompok</SubmitButton></form></CardContent></Card>}
+      {role === "Administrator" && <Card><CardHeader><CardTitle>Pindahkan kelompok</CardTitle></CardHeader><CardContent><form action={moveCage.bind(null, id)} className="space-y-4"><div className="space-y-2"><Label htmlFor="move-cage">Kandang tujuan</Label><FormSelect id="move-cage" required name="id_kandang" placeholder="Pilih kandang" defaultValue={population.id_kandang} options={(cages || []).map(item => ({ id: String(item.id_kandang), label: item.nama_kandang }))} /></div><SubmitButton className="h-9 rounded-lg border px-4 text-sm font-medium">Pindahkan seluruh kelompok</SubmitButton></form></CardContent></Card>}
     </div>
     <Card><CardHeader><CardTitle>Riwayat mutasi</CardTitle></CardHeader><CardContent>{mutations?.length ? <ol className="space-y-3">{mutations.map(item => <li key={item.no_mutasi} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"><span className="flex size-8 items-center justify-center rounded-lg bg-muted"><ArrowRightLeft className="size-4" /></span><div className="min-w-28 flex-1"><strong className="block">#{item.no_mutasi} · {formatDate(String(item.tanggal))}</strong><span className="text-muted-foreground">{item.keterangan || "Tanpa keterangan"}</span></div><StatusBadge value={item.jenis_mutasi} /><strong className="tabular-nums">{formatNumber(Number(item.jumlah))} ekor</strong></li>)}</ol> : <EmptyState icon={ArrowRightLeft} title="Belum ada mutasi" description="Riwayat perubahan populasi akan tampil di sini." />}</CardContent></Card>
   </div>;

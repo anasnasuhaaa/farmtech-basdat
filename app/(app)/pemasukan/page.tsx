@@ -1,20 +1,24 @@
 import { requireSession } from "@/lib/auth";
 import { saveIncome } from "./actions";
 import { SubmitButton } from "@/components/submit-button";
+import { PageHeader } from "@/components/page-header";
+import { FeedbackToast } from "@/components/feedback-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default async function IncomePage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
   await requireSession(["ABK"]);
   const message = await searchParams;
-  return <div className="max-w-xl space-y-5">
-    <h1 className="text-2xl font-semibold">Catat pemasukan lainnya</h1>
-    <p className="text-sm text-muted-foreground">Catatan ini masuk ke buku keuangan. Riwayat lengkap hanya tersedia bagi Administrator dan Pemilik.</p>
-    {message.error && <p role="alert" className="text-destructive">{message.error}</p>}
-    {message.success && <p role="status">{message.success}</p>}
-    <form action={saveIncome} className="space-y-4 rounded-lg border p-4">
-      <label className="block text-sm">Tanggal<input name="tanggal" type="date" required defaultValue={new Date().toISOString().slice(0,10)} className="mt-1 w-full rounded-md border p-2" /></label>
-      <label className="block text-sm">Nominal (Rp)<input name="nominal" type="number" min="0.01" step="0.01" required className="mt-1 w-full rounded-md border p-2" /></label>
-      <label className="block text-sm">Keterangan<textarea name="keterangan" className="mt-1 w-full rounded-md border p-2" /></label>
-      <SubmitButton className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Simpan pemasukan</SubmitButton>
-    </form>
+  return <div className="max-w-2xl space-y-6">
+    <FeedbackToast success={message.success} error={message.error} />
+    <PageHeader title="Catat pemasukan lainnya" parent={{ label: "Keuangan", href: "/lainnya" }} description="Catatan ini masuk ke buku keuangan. Riwayat lengkap tersedia bagi Administrator dan Pemilik." />
+    <Card><CardHeader><CardTitle>Informasi pemasukan</CardTitle><CardDescription>Isi tanggal, nominal, dan keterangan transaksi.</CardDescription></CardHeader><CardContent><form action={saveIncome} className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="income-date">Tanggal</Label><Input id="income-date" name="tanggal" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></div>
+      <div className="space-y-2"><Label htmlFor="income-amount">Nominal (Rp)</Label><Input id="income-amount" name="nominal" type="number" min="0.01" step="0.01" required /></div></div>
+      <div className="space-y-2"><Label htmlFor="income-note">Keterangan</Label><Textarea id="income-note" name="keterangan" rows={4} /></div>
+      <div className="flex justify-end border-t pt-4"><SubmitButton className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">Simpan pemasukan</SubmitButton></div>
+    </form></CardContent></Card>
   </div>;
 }

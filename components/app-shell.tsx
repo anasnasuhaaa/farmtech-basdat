@@ -55,12 +55,13 @@ export function AppShell({ role, name, children }: { role: Role; name: string; c
       </SidebarFooter>
     </Sidebar>
     <SidebarInset className="min-w-0 bg-background">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:text-sm">Lewati navigasi</a>
       <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur md:px-7">
         <div className="hidden md:block"><SidebarTrigger aria-label="Tampilkan atau sembunyikan sidebar" /></div>
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold md:hidden"><span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Leaf className="size-4" /></span>Farm Tech</Link>
         <span className="ml-auto hidden text-xs text-muted-foreground sm:block">Farm Management</span>
       </header>
-      <main className="mx-auto w-full max-w-[1480px] min-w-0 flex-1 px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:px-8 md:py-8 md:pb-10">{children}</main>
+      <div id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1480px] min-w-0 flex-1 px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:px-8 md:py-8 md:pb-10">{children}</div>
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-20px_rgba(24,61,42,.3)] backdrop-blur md:hidden" aria-label="Navigasi utama">
         {mobileGroups.map(item => <Link key={item.label} href={item.href} aria-current={pathname.startsWith(item.match) ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] ${pathname.startsWith(item.match) ? "text-primary font-semibold" : "text-muted-foreground"}`}><item.icon className="size-5" />{item.label}</Link>)}
         <Sheet><SheetTrigger asChild><button type="button" aria-current={moreActive ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] ${moreActive ? "text-primary font-semibold" : "text-muted-foreground"}`}><Menu className="size-5" />Lainnya</button></SheetTrigger>

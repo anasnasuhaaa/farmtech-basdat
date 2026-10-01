@@ -12,12 +12,14 @@ import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { FeedbackToast } from "@/components/feedback-toast";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { FormSelect } from "@/components/form-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input as TextInput } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -32,7 +34,7 @@ function Submit({ label }: { label: string }) { const { pending } = useFormStatu
 function FieldInput({ field, options, defaultValue }: { field: Field; options: Props["options"]; defaultValue?: string }) {
   const id = `field-${field.name}`;
   return <div className="space-y-2"><Label htmlFor={id}>{field.label}</Label>{field.type === "select"
-    ? <select id={id} name={field.name} required={field.required} defaultValue={defaultValue || ""} className="flex h-9 w-full rounded-lg border bg-card px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring"><option value="">Pilih {field.label.toLowerCase()}</option>{(field.source ? options[field.source] || [] : (field.options || []).map(value => ({ id: value, label: value }))).map(item => <option key={item.id} value={item.id}>{item.label.replaceAll("_", " ")}</option>)}</select>
+    ? <FormSelect id={id} name={field.name} required={field.required} defaultValue={defaultValue} placeholder={`Pilih ${field.label.toLowerCase()}`} options={(field.source ? options[field.source] || [] : (field.options || []).map(value => ({ id: value, label: value }))).map(item => ({ ...item, label: item.label.replaceAll("_", " ") }))} />
     : field.type === "textarea" ? <Textarea id={id} name={field.name} defaultValue={defaultValue} rows={3} />
     : <TextInput id={id} name={field.name} type={field.type || "text"} step={field.step} min={field.type === "number" ? 0 : undefined} required={field.required} defaultValue={defaultValue ?? (field.type === "date" ? new Date().toISOString().slice(0, 10) : "")} />}</div>;
 }
@@ -83,7 +85,7 @@ export function SectionView({ path, config, rows, details: loadedDetails, option
       <div className="grid gap-4 sm:grid-cols-2">{config.fields.map(field => <FieldInput key={`${field.name}-${String(editing?.[config.id] || "new")}`} field={field} options={options} defaultValue={editing ? String(editing[field.name] ?? "") : undefined} />)}</div>
       {detailKind && <div className="space-y-4"><Separator /><div><h3 className="font-semibold">{detailKind === "mix" ? "Bahan campuran" : detailKind === "sortir" ? "Hasil sortir" : "Rincian distribusi"}</h3><p className="text-sm text-muted-foreground">Tambahkan setiap item beserta jumlahnya.</p></div>
         <div className="space-y-3">{details.map((item, index) => <div key={index} className="grid gap-2 rounded-lg border bg-muted/30 p-3 sm:grid-cols-[1fr_1fr_auto]">
-          <label className="grid gap-1 text-xs font-medium">Item<select required value={detailKind === "mix" ? item.id_pakan : item.id_kategori_telur} onChange={event => setDetails(old => old.map((row, i) => i === index ? { ...row, [detailKind === "mix" ? "id_pakan" : "id_kategori_telur"]: event.target.value } : row))} className="h-9 min-w-0 rounded-lg border bg-card px-2 text-sm"><option value="">Pilih {detailKind === "mix" ? "pakan" : "kategori telur"}</option>{(detailOptions || []).map(option => <option value={option.id} key={option.id}>{option.label}</option>)}</select></label>
+          <div className="grid gap-1"><Label htmlFor={`detail-item-${index}`} className="text-xs">Item</Label><Select name={`_detail_item_${index}`} required value={detailKind === "mix" ? item.id_pakan : item.id_kategori_telur} onValueChange={value => setDetails(old => old.map((row, i) => i === index ? { ...row, [detailKind === "mix" ? "id_pakan" : "id_kategori_telur"]: value } : row))}><SelectTrigger id={`detail-item-${index}`} className="h-9 w-full min-w-0 bg-card"><SelectValue placeholder={`Pilih ${detailKind === "mix" ? "pakan" : "kategori telur"}`} /></SelectTrigger><SelectContent>{(detailOptions || []).map(option => <SelectItem value={option.id} key={option.id}>{option.label}</SelectItem>)}</SelectContent></Select></div>
           <label className="grid gap-1 text-xs font-medium">{detailKind === "mix" ? "Berat (kg)" : "Jumlah (butir)"}<TextInput required type="number" min="0.001" step={detailKind === "mix" ? "0.001" : "1"} value={detailKind === "mix" ? item.berat_bahan : item.jumlah_telur} onChange={event => setDetails(old => old.map((row, i) => i === index ? { ...row, [detailKind === "mix" ? "berat_bahan" : "jumlah_telur"]: event.target.value } : row))} /></label>
           {detailKind === "distribusi" && <label className="grid gap-1 text-xs font-medium sm:col-span-2">Harga satuan<TextInput required type="number" min="0" step="0.01" value={item.harga_satuan} onChange={event => setDetails(old => old.map((row, i) => i === index ? { ...row, harga_satuan: event.target.value } : row))} /></label>}
           {details.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Hapus detail" onClick={() => setDetails(old => old.filter((_, i) => i !== index))}><Trash2 className="size-4" /></Button>}

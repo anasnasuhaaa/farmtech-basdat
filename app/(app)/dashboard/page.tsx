@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Boxes, Egg, Gauge, Sprout, UsersRound, WalletCards, Wheat } from "lucide-react";
 import { requireSession } from "@/lib/auth";
-import { dailyMetrics, dateRange } from "@/lib/business/metrics";
+import { dailyMetrics, dateRange, jakartaToday } from "@/lib/business/metrics";
 import { formatDate, formatMetric, formatMoney, formatNumber } from "@/lib/format";
 import { loadAll } from "@/lib/supabase/load-all";
 import { DashboardCharts } from "@/components/dashboard-charts";
+import { FormSelect } from "@/components/form-select";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     return <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Dashboard gagal dimuat. Periksa koneksi dan urutan migration.</div>;
   }
   const days = dailyMetrics(range.from, range.to, data.populations, data.mutations, data.harvests, data.feedIssues, data.finance);
-  const latest = days.at(-1)!;
+  const today = jakartaToday();
+  const latest = range.to === today ? days.at(-1)! : dailyMetrics(today, today, data.populations, data.mutations, data.harvests, data.feedIssues, data.finance)[0];
   const totalEggs = days.reduce((sum, day) => sum + day.eggs, 0);
   const stockKg = data.feedStock.reduce((sum, row) => sum + Number(row.stok_kg || 0), 0);
   const cash = data.finance.reduce((sum, row) => sum + Number(row.nominal_bertanda || 0), 0);
@@ -43,7 +45,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return <div className="space-y-6">
     <PageHeader title="Dashboard" description="Ringkasan operasional peternakan." action={<span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-2 text-xs text-muted-foreground"><Sprout className="size-4 text-primary" />{formatDate(range.from)} – {formatDate(range.to)}</span>} />
     <form className="flex flex-wrap items-end gap-2 print:hidden">
-      <label className="grid gap-1 text-xs font-medium text-muted-foreground">Periode<select name="period" defaultValue={range.period} className="h-9 min-w-28 rounded-lg border bg-card px-3 text-sm text-foreground"><option value="7">7 hari</option><option value="30">30 hari</option><option value="custom">Kustom</option></select></label>
+      <div className="grid gap-1 text-xs font-medium text-muted-foreground"><span>Periode</span><FormSelect id="dashboard-period" name="period" placeholder="Pilih periode" defaultValue={range.period} className="h-9 min-w-28 bg-card" options={[{ id: "7", label: "7 hari" }, { id: "30", label: "30 hari" }, { id: "custom", label: "Kustom" }]} /></div>
       <label className="grid gap-1 text-xs font-medium text-muted-foreground">Dari<Input type="date" name="from" defaultValue={range.from} className="h-9 w-36 bg-card" /></label>
       <label className="grid gap-1 text-xs font-medium text-muted-foreground">Sampai<Input type="date" name="to" defaultValue={range.to} className="h-9 w-36 bg-card" /></label>
       <Button type="submit" className="h-9">Terapkan</Button>

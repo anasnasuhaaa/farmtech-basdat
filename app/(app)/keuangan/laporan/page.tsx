@@ -1,38 +1,46 @@
+import { ArrowDownLeft, ArrowUpRight, WalletCards } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { dateRange, type Row } from "@/lib/business/metrics";
+import { formatDate, formatMoney } from "@/lib/format";
 import { loadAll } from "@/lib/supabase/load-all";
 import { PrintButton } from "@/components/print-button";
-
-const money = (value: number) => "Rp " + new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+import { PageHeader } from "@/components/page-header";
+import { FormSelect } from "@/components/form-select";
+import { MetricCard } from "@/components/metric-card";
+import { StatusBadge } from "@/components/status-badge";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default async function ReportPage({ searchParams }: { searchParams: Promise<{ period?: string; from?: string; to?: string }> }) {
   const { supabase } = await requireSession(["Administrator", "Pemilik"]);
   const range = dateRange(await searchParams, undefined, 3660);
   let all: Row[];
   try { all = await loadAll(supabase, "v_buku_keuangan"); }
-  catch { return <p role="alert" className="text-destructive">Laporan gagal dimuat. Periksa koneksi dan migration.</p>; }
-  const rows = all.filter(row => String(row.tanggal) >= range.from && String(row.tanggal) <= range.to)
-    .sort((a, b) => String(a.tanggal).localeCompare(String(b.tanggal)));
+  catch { return <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive">Laporan gagal dimuat. Periksa koneksi dan migration.</p>; }
+  const rows = all.filter(row => String(row.tanggal) >= range.from && String(row.tanggal) <= range.to).sort((a, b) => String(a.tanggal).localeCompare(String(b.tanggal)));
   const income = rows.filter(row => row.tipe === "PEMASUKAN").reduce((sum, row) => sum + Number(row.nominal || 0), 0);
   const expense = rows.filter(row => row.tipe === "PENGELUARAN").reduce((sum, row) => sum + Number(row.nominal || 0), 0);
   const byCategory = new Map<string, { type: string; amount: number }>();
   for (const row of rows) {
-    const name = String(row.nama_kategori || "-");
+    const name = String(row.nama_kategori || "—");
     const current = byCategory.get(name) || { type: String(row.tipe), amount: 0 };
     current.amount += Number(row.nominal || 0);
     byCategory.set(name, current);
   }
   return <div className="space-y-6">
-    <div><h1 className="text-2xl font-semibold">Laporan keuangan</h1><p className="text-sm text-muted-foreground">Farm Tech · {range.from} sampai {range.to}</p></div>
-    <form className="flex flex-wrap items-end gap-2 rounded-lg border p-3 print:hidden">
-      <label className="text-sm">Periode<select name="period" defaultValue={range.period} className="ml-2 rounded-md border p-2"><option value="7">7 hari</option><option value="30">30 hari</option><option value="custom">Kustom</option></select></label>
-      <label className="text-sm">Dari <input type="date" name="from" defaultValue={range.from} className="rounded-md border p-2" /></label>
-      <label className="text-sm">Sampai <input type="date" name="to" defaultValue={range.to} className="rounded-md border p-2" /></label>
-      <button className="rounded-md border px-4 py-2 text-sm">Terapkan</button><PrintButton />
+    <PageHeader title="Laporan keuangan" parent={{ label: "Keuangan", href: "/keuangan/transaksi" }} description={`Ringkasan transaksi ${formatDate(range.from)} – ${formatDate(range.to)}.`} action={<PrintButton />} />
+    <form className="flex flex-wrap items-end gap-2 print:hidden">
+      <div className="grid gap-1 text-xs font-medium text-muted-foreground"><span>Periode</span><FormSelect id="report-period" name="period" placeholder="Pilih periode" defaultValue={range.period} className="h-9 min-w-28 bg-card" options={[{ id: "7", label: "7 hari" }, { id: "30", label: "30 hari" }, { id: "custom", label: "Kustom" }]} /></div>
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">Dari<Input name="from" type="date" defaultValue={range.from} className="h-9 w-36 bg-card" /></label>
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">Sampai<Input name="to" type="date" defaultValue={range.to} className="h-9 w-36 bg-card" /></label>
+      <Button type="submit" variant="outline" className="h-9">Terapkan</Button>
     </form>
     {range.invalid && <p role="alert" className="text-sm text-destructive">Periode tidak valid. Ditampilkan 30 hari terakhir.</p>}
-    <div className="grid gap-3 sm:grid-cols-3">{[["Pemasukan",income],["Pengeluaran",expense],["Saldo periode",income-expense]].map(([label,value]) => <div key={label} className="rounded-lg border p-4"><p className="text-sm text-muted-foreground">{label}</p><strong className="text-xl">{money(Number(value))}</strong></div>)}</div>
-    <section><h2 className="mb-2 font-semibold">Ringkasan per kategori</h2><div className="overflow-x-auto rounded-lg border"><table className="w-full text-left text-sm"><thead className="bg-muted"><tr><th className="p-2">Kategori</th><th className="p-2">Tipe</th><th className="p-2 text-right">Total</th></tr></thead><tbody>{[...byCategory].map(([name, value]) => <tr key={name} className="border-t"><td className="p-2">{name}</td><td className="p-2">{value.type}</td><td className="p-2 text-right">{money(value.amount)}</td></tr>)}</tbody></table>{!byCategory.size && <p className="p-3 text-sm text-muted-foreground">Belum ada transaksi pada periode ini.</p>}</div></section>
-    <section><h2 className="mb-2 font-semibold">Daftar transaksi</h2><div className="overflow-x-auto rounded-lg border"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-muted"><tr>{["Tanggal","Tipe","Kategori","Keterangan","Nominal"].map(x => <th key={x} className="p-2">{x}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={String(row.id_transaksi)} className="border-t"><td className="p-2">{String(row.tanggal)}</td><td className="p-2">{String(row.tipe)}</td><td className="p-2">{String(row.nama_kategori)}</td><td className="p-2">{String(row.keterangan || "-")}</td><td className="p-2 text-right">{money(Number(row.nominal || 0))}</td></tr>)}</tbody></table>{!rows.length && <p className="p-3 text-sm text-muted-foreground">Belum ada transaksi pada periode ini.</p>}</div></section>
+    <div className="grid gap-3 sm:grid-cols-3"><MetricCard label="Total pemasukan" value={formatMoney(income)} icon={ArrowDownLeft} /><MetricCard label="Total pengeluaran" value={formatMoney(expense)} icon={ArrowUpRight} tone="earth" /><MetricCard label="Saldo periode" value={formatMoney(income - expense)} icon={WalletCards} /></div>
+    <Card><CardHeader><CardTitle>Ringkasan per kategori</CardTitle><CardDescription>Akumulasi nominal untuk periode terpilih.</CardDescription></CardHeader><CardContent>{byCategory.size ? <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kategori</TableHead><TableHead>Tipe</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader><TableBody>{[...byCategory].map(([name, value]) => <TableRow key={name}><TableCell className="font-medium">{name}</TableCell><TableCell><StatusBadge value={value.type} /></TableCell><TableCell className="text-right tabular-nums">{formatMoney(value.amount)}</TableCell></TableRow>)}</TableBody></Table></div> : <EmptyState icon={WalletCards} title="Belum ada transaksi" description="Tidak ada transaksi pada periode ini." />}</CardContent></Card>
+    <Card><CardHeader><CardTitle>Daftar transaksi</CardTitle><CardDescription>{rows.length} transaksi pada periode terpilih.</CardDescription></CardHeader><CardContent>{rows.length ? <div className="overflow-x-auto"><Table className="min-w-[620px]"><TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Tipe</TableHead><TableHead>Kategori</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-right">Nominal</TableHead></TableRow></TableHeader><TableBody>{rows.map(row => <TableRow key={String(row.id_transaksi)}><TableCell>{formatDate(String(row.tanggal))}</TableCell><TableCell><StatusBadge value={String(row.tipe)} /></TableCell><TableCell>{String(row.nama_kategori)}</TableCell><TableCell className="max-w-64 truncate text-muted-foreground">{String(row.keterangan || "—")}</TableCell><TableCell className="text-right font-medium tabular-nums">{formatMoney(Number(row.nominal || 0))}</TableCell></TableRow>)}</TableBody></Table></div> : <EmptyState icon={WalletCards} title="Belum ada transaksi" description="Daftar transaksi pada periode ini masih kosong." />}</CardContent></Card>
   </div>;
 }
