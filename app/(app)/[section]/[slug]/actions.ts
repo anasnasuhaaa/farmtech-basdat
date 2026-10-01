@@ -11,7 +11,7 @@ export async function saveSection(path: string, form: FormData) {
   const { supabase, role } = await requireSession();
   if (role === "Pemilik" || (config.master && role !== "Administrator") || ((config.adminOnly || config.finance) && role !== "Administrator")) redirect("/dashboard");
   const url = `/${path}`;
-  const errorUrl = (message: string) => `${url}?error=${encodeURIComponent(message)}`;
+  const errorUrl = (message: string) => `${url}?error=${encodeURIComponent(message)}${path === "keuangan/transaksi" && ["PEMASUKAN", "PENGELUARAN"].includes(value(form, "tipe")) ? `&type=${value(form, "tipe")}` : ""}`;
   const operation = value(form, "_operation") || "create";
   let error: { message: string } | null = null;
   if (config.master) {

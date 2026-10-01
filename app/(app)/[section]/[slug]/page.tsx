@@ -5,7 +5,7 @@ import { loadAll } from "@/lib/supabase/load-all";
 import { SectionView } from "./section-view";
 
 type Params = { section: string; slug: string };
-export default async function SectionPage({ params, searchParams }: { params: Promise<Params>; searchParams: Promise<{ q?: string; from?: string; to?: string; filter?: string; error?: string; success?: string }> }) {
+export default async function SectionPage({ params, searchParams }: { params: Promise<Params>; searchParams: Promise<{ q?: string; from?: string; to?: string; filter?: string; error?: string; success?: string; type?: string }> }) {
   const { section, slug } = await params;
   const path = `${section}/${slug}`;
   const config = sections[path];
@@ -26,10 +26,10 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   const sources = [...new Set([...config.fields.map(x => x.source).filter((x): x is string => !!x),
     ...(path === "telur/panen" || path === "telur/sortir" || path === "telur/distribusi" ? ["kategori_telur"] : []),
     ...(filterSource ? [filterSource] : [])])];
-  const options: Record<string, { id: string; label: string }[]> = {};
+  const options: Record<string, { id: string; label: string; type?: string }[]> = {};
   await Promise.all(sources.map(async source => {
     const result = await supabase.from(source).select("*").limit(200);
-    options[source] = (result.data || []).map(row => ({ id: String(row[optionId[source]]), label: String(row[optionLabel[source]]) }));
+    options[source] = (result.data || []).map(row => ({ id: String(row[optionId[source]]), label: String(row[optionLabel[source]]), ...(source === "kategori_keuangan" ? { type: String(row.tipe) } : {}) }));
   }));
   const dateColumn = config.columns.includes("tanggal") ? "tanggal" : config.columns.includes("tanggal_masuk") ? "tanggal_masuk" : null;
   const rows = data.filter(row => (!search.from || !dateColumn || String(row[dateColumn]) >= search.from)
