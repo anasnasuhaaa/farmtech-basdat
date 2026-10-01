@@ -1,10 +1,16 @@
 import Link from "next/link";
+import { Boxes, Egg, Gauge, Sprout, UsersRound, WalletCards, Wheat } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { dailyMetrics, dateRange } from "@/lib/business/metrics";
+import { formatDate, formatMetric, formatMoney, formatNumber } from "@/lib/format";
 import { loadAll } from "@/lib/supabase/load-all";
-
-const num = (value: number, digits = 0) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: digits }).format(value);
-const metric = (value: number | null, suffix = "") => value === null ? "-" : `${num(value, 2)}${suffix}`;
+import { DashboardCharts } from "@/components/dashboard-charts";
+import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ period?: string; from?: string; to?: string }> }) {
   const { supabase, role } = await requireSession();
@@ -18,7 +24,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ]);
     data = { populations, mutations, harvests, feedIssues, feedStock, finance };
   } catch {
-    return <div role="alert" className="rounded-md border p-4">Dashboard gagal dimuat. Periksa koneksi dan urutan migration.</div>;
+    return <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Dashboard gagal dimuat. Periksa koneksi dan urutan migration.</div>;
   }
   const days = dailyMetrics(range.from, range.to, data.populations, data.mutations, data.harvests, data.feedIssues, data.finance);
   const latest = days.at(-1)!;
@@ -26,24 +32,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const stockKg = data.feedStock.reduce((sum, row) => sum + Number(row.stok_kg || 0), 0);
   const cash = data.finance.reduce((sum, row) => sum + Number(row.nominal_bertanda || 0), 0);
   const cards = [
-    ["HDP hari ini", metric(latest.hdp, "%")], ["HHP hari ini", metric(latest.hhp, "%")],
-    ["FCR hari ini", metric(latest.fcr)], ["Populasi aktif", num(latest.population)],
-    ["Panen hari ini", num(latest.eggs) + " butir"], ["Stok pakan", num(stockKg, 3) + " kg"],
-    ...(role === "ABK" ? [] : [["Saldo kas", "Rp " + num(cash, 2)]]),
+    { label: "HDP hari ini", value: formatMetric(latest.hdp, "%"), detail: latest.hdp === null ? "Belum ada data hari ini" : undefined, icon: Gauge },
+    { label: "HHP hari ini", value: formatMetric(latest.hhp, "%"), detail: latest.hhp === null ? "Belum ada data hari ini" : undefined, icon: Egg },
+    { label: "FCR hari ini", value: formatMetric(latest.fcr), detail: latest.fcr === null ? "Belum ada data hari ini" : undefined, icon: Wheat, tone: "earth" as const },
+    { label: "Populasi aktif", value: formatNumber(latest.population), detail: "Ekor", icon: UsersRound },
+    { label: "Panen hari ini", value: formatNumber(latest.eggs), detail: "Butir", icon: Egg, tone: "amber" as const },
+    { label: "Stok pakan", value: formatNumber(stockKg, true), detail: "Kilogram", icon: Boxes, tone: "earth" as const },
+    ...(role === "ABK" ? [] : [{ label: "Saldo kas", value: formatMoney(cash), icon: WalletCards }]),
   ];
-  const maxEggs = Math.max(1, ...days.map(day => day.eggs));
   return <div className="space-y-6">
-    <div><h1 className="text-2xl font-semibold">Dashboard</h1><p className="text-sm text-muted-foreground">Ringkasan {range.from} hingga {range.to}</p></div>
-    <form className="flex flex-wrap items-end gap-2 rounded-lg border p-3 print:hidden">
-      <label className="text-sm">Periode<select name="period" defaultValue={range.period} className="ml-2 rounded-md border p-2"><option value="7">7 hari</option><option value="30">30 hari</option><option value="custom">Kustom</option></select></label>
-      <label className="text-sm">Dari <input type="date" name="from" defaultValue={range.from} className="rounded-md border p-2" /></label>
-      <label className="text-sm">Sampai <input type="date" name="to" defaultValue={range.to} className="rounded-md border p-2" /></label>
-      <button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Terapkan</button>
+    <PageHeader title="Dashboard" description="Ringkasan operasional peternakan." action={<span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-2 text-xs text-muted-foreground"><Sprout className="size-4 text-primary" />{formatDate(range.from)} – {formatDate(range.to)}</span>} />
+    <form className="flex flex-wrap items-end gap-2 print:hidden">
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">Periode<select name="period" defaultValue={range.period} className="h-9 min-w-28 rounded-lg border bg-card px-3 text-sm text-foreground"><option value="7">7 hari</option><option value="30">30 hari</option><option value="custom">Kustom</option></select></label>
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">Dari<Input type="date" name="from" defaultValue={range.from} className="h-9 w-36 bg-card" /></label>
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">Sampai<Input type="date" name="to" defaultValue={range.to} className="h-9 w-36 bg-card" /></label>
+      <Button type="submit" className="h-9">Terapkan</Button>
     </form>
     {range.invalid && <p role="alert" className="text-sm text-destructive">Periode tidak valid. Ditampilkan 30 hari terakhir (maksimal 90 hari).</p>}
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{cards.map(([label, value]) => <div key={label} className="rounded-lg border p-4"><p className="text-sm text-muted-foreground">{label}</p><strong className="mt-2 block text-xl">{value}</strong></div>)}</div>
-    <p className="text-sm">Panen selama periode: <strong>{num(totalEggs)} butir</strong>. <Link href="/telur/panen" className="underline">Lihat panen</Link></p>
-    <div className="rounded-lg border p-4"><h2 className="font-semibold">Tren produksi telur</h2><div className="mt-3 space-y-2">{days.slice(-14).map(day => <div key={day.date} className="grid grid-cols-[5.5rem_1fr_4rem] items-center gap-3 text-xs"><span>{day.date.slice(5)}</span><div className="h-3 rounded-sm bg-muted"><div className="h-full rounded-sm bg-primary" style={{ width: `${day.eggs / maxEggs * 100}%` }} /></div><span className="text-right">{num(day.eggs)}</span></div>)}</div><p className="mt-2 text-xs text-muted-foreground">14 hari terakhir dari periode terpilih.</p></div>
-    <div className="overflow-x-auto rounded-lg border"><table className="w-full min-w-[780px] text-left text-sm"><thead className="bg-muted"><tr>{["Tanggal","Populasi","Telur","Pakan kg","HDP","HHP","FCR",...(role === "ABK" ? [] : ["Pemasukan","Pengeluaran"])].map(x => <th key={x} className="p-2">{x}</th>)}</tr></thead><tbody>{days.map(day => <tr key={day.date} className="border-t"><td className="p-2">{day.date}</td><td className="p-2">{num(day.population)}</td><td className="p-2">{num(day.eggs)}</td><td className="p-2">{num(day.feedKg,3)}</td><td className="p-2">{metric(day.hdp,"%")}</td><td className="p-2">{metric(day.hhp,"%")}</td><td className="p-2">{metric(day.fcr)}</td>{role !== "ABK" && <><td className="p-2">{num(day.income,2)}</td><td className="p-2">{num(day.expense,2)}</td></>}</tr>)}</tbody></table></div>
+    <div className="grid gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{cards.map(card => <MetricCard key={card.label} {...card} />)}</div>
+    <p className="text-sm text-muted-foreground">Panen selama periode: <strong className="text-foreground">{formatNumber(totalEggs)} butir</strong>. <Link href="/telur/panen" className="font-medium text-primary underline underline-offset-2">Lihat panen</Link></p>
+    <DashboardCharts days={days} showFinance={role !== "ABK"} />
+    <Card><CardHeader><CardTitle>Rincian harian</CardTitle><CardDescription>Angka dasar untuk membaca tren pada periode terpilih.</CardDescription></CardHeader><CardContent><div className="overflow-x-auto"><Table className="min-w-[780px]"><TableHeader><TableRow>{["Tanggal", "Populasi", "Telur", "Pakan kg", "HDP", "HHP", "FCR", ...(role === "ABK" ? [] : ["Pemasukan", "Pengeluaran"])].map(label => <TableHead key={label} className={label === "Tanggal" ? "" : "text-right"}>{label}</TableHead>)}</TableRow></TableHeader><TableBody>{days.map(day => <TableRow key={day.date}><TableCell>{formatDate(day.date)}</TableCell><TableCell className="text-right tabular-nums">{formatNumber(day.population)}</TableCell><TableCell className="text-right tabular-nums">{formatNumber(day.eggs)}</TableCell><TableCell className="text-right tabular-nums">{formatNumber(day.feedKg, true)}</TableCell><TableCell className="text-right tabular-nums">{formatMetric(day.hdp, "%")}</TableCell><TableCell className="text-right tabular-nums">{formatMetric(day.hhp, "%")}</TableCell><TableCell className="text-right tabular-nums">{formatMetric(day.fcr)}</TableCell>{role !== "ABK" && <><TableCell className="text-right tabular-nums">{formatMoney(day.income)}</TableCell><TableCell className="text-right tabular-nums">{formatMoney(day.expense)}</TableCell></>}</TableRow>)}</TableBody></Table></div></CardContent></Card>
   </div>;
 }
