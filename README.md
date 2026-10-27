@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Farm Tech
 
-## Getting Started
+Aplikasi demo manajemen peternakan menggunakan Next.js dan Supabase. Autentikasi memakai Supabase Auth; izin Administrator, Pemilik, dan ABK diperiksa di server dan PostgreSQL RLS.
 
-First, run the development server:
+## Menjalankan aplikasi
+
+Gunakan Node.js 22 atau lebih baru. Jalankan `npm install`. Jika `.env` belum ada, salin `.env.example` menjadi `.env`, lalu isi `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Jika sudah terisi, pertahankan nilainya.
+
+Siapkan database dengan salah satu cara berikut.
+
+### Melalui SQL Editor Supabase
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run db:sql
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka `supabase/setup-demo.sql`, salin **seluruh isinya** ke **Supabase Dashboard → SQL Editor → New query**, lalu klik **Run**. File ini membuat tabel, fungsi, RLS, data awal, dan ketiga akun demo yang emailnya sudah terverifikasi. Tidak perlu mengubah pengaturan konfirmasi email atau mengirim email.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+File SQL boleh dijalankan ulang: migration yang tercatat dilewati dan data operasional dipertahankan. Ketiga akun `@farmtech.test` akan diaktifkan kembali dengan role dan password demo aslinya.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Melalui koneksi PostgreSQL
 
-## Learn More
+Tambahkan `DATABASE_URL` dari connection string PostgreSQL Supabase ke `.env`. Gunakan Session pooler port 5432 jika jaringan tidak mendukung IPv6, dan URL-encode karakter khusus pada password. Variabel ini hanya dipakai script database dan tidak dikirim ke browser.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run db:setup
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`db:migrate` hanya menerapkan migration; `db:seed` hanya menyiapkan akun dan data demo. SQL Editor dan script memakai catatan migration yang sama. Setup tidak menghapus tabel atau data aplikasi.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Setelah database siap:
 
-## Deploy on Vercel
+```bash
+npm run db:verify
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Buka http://localhost:3000. Pilih role, lalu klik **Masuk sebagai …**. Form email/password juga tersedia.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Role | Email | Password | Akses |
+| --- | --- | --- | --- |
+| Administrator | admin@farmtech.test | Admin123! | Operasional, keuangan, master data, pengguna |
+| Pemilik | pemilik@farmtech.test | Pemilik123! | Pemantauan operasional dan laporan keuangan |
+| ABK | abk@farmtech.test | Abk123! | Pencatatan operasional dan pemasukan lainnya |
+
+Akun di atas memang ditampilkan publik untuk demo. Data awal berisi 1.000 petelur, pembelian pakan, dan tujuh hari panen, sortir, pemakaian pakan, serta penjualan telur. Menjalankan seed ulang mempertahankan transaksi demo yang sudah dicatat.
+
+## Pemeriksaan
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run db:verify
+npx playwright install chromium
+npm run test:e2e
+```
+
+`db:verify` menguji login ketiga akun pada Supabase yang terkonfigurasi, role, akses tabel dashboard, dan pembatasan data keuangan ABK. Pengujian browser memeriksa kedua cara login untuk setiap role, sesi setelah reload, menu, stok pakan, logout, dan penolakan halaman terlindungi setelah logout.
+
+Untuk menjalankan hasil build production: `npm start`.

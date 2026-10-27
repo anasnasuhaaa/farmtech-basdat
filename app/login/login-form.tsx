@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { BarChart3, Egg, Leaf, ShieldCheck, Sprout } from "lucide-react";
 import { demoAccounts } from "@/lib/demo-accounts";
-import { login } from "./actions";
+import { login, loginDemo } from "./actions";
 import { SubmitButton } from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
 import { FeedbackToast } from "@/components/feedback-toast";
@@ -25,19 +25,26 @@ export function LoginForm({ error }: { error?: string }) {
       <div className="relative hidden gap-5 text-xs text-white/70 lg:flex"><span className="flex items-center gap-2"><Egg className="size-4" />Produksi</span><span className="flex items-center gap-2"><BarChart3 className="size-4" />Laporan</span><span className="flex items-center gap-2"><ShieldCheck className="size-4" />Akses sesuai peran</span></div>
     </section>
     <section className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-8 lg:px-14"><Card className="min-w-0 w-full max-w-[calc(100vw-2rem)] border border-border shadow-[0_20px_60px_-35px_rgba(24,61,42,.4)] sm:max-w-md">
-      <CardHeader><CardTitle className="text-2xl font-semibold">Masuk ke Farm Tech</CardTitle><CardDescription>Gunakan akun Anda untuk melanjutkan.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-2xl font-semibold">Masuk ke Farm Tech</CardTitle><CardDescription>Pilih role demo untuk langsung masuk, atau gunakan akun Anda.</CardDescription></CardHeader>
       <CardContent className="space-y-6">
-        <form action={login} className="space-y-4">
+        <div><p className="mb-3 text-sm font-semibold">Coba akun demo</p>
+          <Tabs value={active} onValueChange={setActive}><TabsList className="grid h-auto w-full grid-cols-3">{demoAccounts.map(item => <TabsTrigger key={item.role} value={item.role} className="px-1 text-xs sm:text-sm">{item.role}</TabsTrigger>)}</TabsList></Tabs>
+          <form action={loginDemo} className="mt-3">
+            <input type="hidden" name="role" value={account.role} />
+            <SubmitButton className="h-10 w-full">Masuk sebagai {account.role}</SubmitButton>
+          </form>
+          <details className="mt-3 text-xs text-muted-foreground sm:text-sm"><summary className="cursor-pointer">Lihat email dan password demo</summary>
+            <div className="mt-2 rounded-lg bg-muted p-3 leading-relaxed"><p className="truncate">Email: {account.email}</p><p>Password: {account.password}</p></div>
+            <Button type="button" variant="secondary" className="mt-2 w-full" onClick={() => { setEmail(account.email); setPassword(account.password); }}>Isi form dengan akun ini</Button>
+          </details>
+        </div>
+        {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+        <form action={login} className="space-y-4 border-t pt-5">
+          <p className="text-sm font-semibold">Masuk dengan email</p>
           <div className="space-y-2"><Label htmlFor="login-email">Email</Label><Input id="login-email" required type="email" name="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} placeholder="nama@peternakan.com" /></div>
           <div className="space-y-2"><Label htmlFor="login-password">Password</Label><Input id="login-password" required type="password" name="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} /></div>
-          {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
           <SubmitButton className="h-10 w-full rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">Masuk</SubmitButton>
         </form>
-        <div className="border-t pt-5"><p className="mb-3 text-sm font-semibold">Coba akun demo</p>
-          <Tabs value={active} onValueChange={setActive}><TabsList className="grid h-auto w-full grid-cols-3">{demoAccounts.map(item => <TabsTrigger key={item.role} value={item.role} className="px-1 text-xs sm:text-sm">{item.role}</TabsTrigger>)}</TabsList></Tabs>
-          <div className="mt-3 rounded-lg bg-muted p-3 text-xs leading-relaxed sm:text-sm"><p className="truncate"><span className="text-muted-foreground">Email:</span> {account.email}</p><p><span className="text-muted-foreground">Password:</span> {account.password}</p></div>
-          <Button type="button" variant="secondary" className="mt-3 w-full" onClick={() => { setEmail(account.email); setPassword(account.password); }}>Gunakan akun ini</Button>
-        </div>
       </CardContent>
     </Card></section>
   </>;
